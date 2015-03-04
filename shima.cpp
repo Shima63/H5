@@ -23,6 +23,7 @@ using namespace std;
 // Global Variables
 
 string inputfilename, outputfilename = "shima.out", logfilename = "shima.log", message;
+int flag;
 
 // Defining Struct
 
@@ -58,8 +59,16 @@ void check_time ( string, ofstream & );
 void check_time_zone ( string, ofstream & );
 void check_magnitude_type ( string, ofstream & );
 void check_magnitude_size ( float, ofstream & );
+void produce_signal ( ofstream &, string, string, string, string, string, string );
 string uppercase ( string );
 string monthstring ( months );
+string change_band ( string );
+string change_instrument ( string );
+void check_network_code ( int, string, ofstream & );
+void check_station_code ( int, string, ofstream & );
+void check_type_of_band ( int, string , ofstream & );
+void check_type_of_instrument ( int, string, ofstream & );        
+
 
 // ********************************************************************************************************************
 
@@ -72,7 +81,7 @@ int main () {
     
     string Event_ID, date, time, time_zone, earthquake_name, earthquake_name_continue, magnitude_type, day, month, year;
     string temp, temp1, temp2, temp3;
-    int num_of_valid_entries = 0, num_of_input = 0, flag = 0, value = 0, num_of_signal = 0;
+    int num_of_valid_entries = 0, num_of_input = 0, value = 0, num_of_signal = 0;
     double longitude, latitude, depth;
     float magnitude_size;
     months month_name;
@@ -151,77 +160,18 @@ int main () {
     while ( ( inputfile >> entry_temp.network_code ) && ( num_of_valid_entries < 300 ) ) {
         flag = 0;
         num_of_input = num_of_input + 1;
-    
-        // Checking Network
-
-        if ( ( entry_temp.network_code.length() != 2 ) || ( ( entry_temp.network_code != "CE" ) && ( entry_temp.network_code != "CI" ) && ( entry_temp.network_code != "FA" ) && ( entry_temp.network_code != "NP" ) && ( entry_temp.network_code != "WR" ) ) ) {
-            flag = 1;
-        }
-        if ( flag == 1) {
-            print_file ( "Entry # ", logfile );
-            print_file ( num_of_input, logfile );
-            print_file ( " ignored. Invalid network. ", logfile );
-            print_file ( "\n", logfile );
-        }
         
-        // Checking Station Code
-        
-        inputfile >> entry_temp.station_code;        
-        if ( entry_temp.station_code.length() != 3 ) {
-            if ( entry_temp.station_code.length() != 5 ) {
-                flag = 2;
-            }
-            else {
-                if ( ( !isdigit ( entry_temp.station_code[0] ) ) || ( !isdigit ( entry_temp.station_code[1] ) ) || ( !isdigit ( entry_temp.station_code[2] ) ) || ( !isdigit ( entry_temp.station_code[3] ) ) || ( !isdigit ( entry_temp.station_code[4] ) ) ) {
-                    flag = 2;
-                }    
-            }
-        }
-        else {
-            if ( ( !isalpha ( entry_temp.station_code[0] ) ) || ( !isalpha ( entry_temp.station_code[1] ) ) || ( !isalpha ( entry_temp.station_code[2] ) ) ) {
-                flag = 2;
-            }
-            else {
-                if ( uppercase ( entry_temp.station_code ) != entry_temp.station_code ) {
-                    flag = 2;
-                }    
-            }
-        }        
-        if ( flag == 2) {
-            print_file ( "Entry # ", logfile );
-            print_file ( num_of_input, logfile );
-            print_file ( " ignored. Invalid station code. ", logfile ); 
-            print_file ( "\n", logfile );
-        }
-        
-        
-        // Checking Type of Band
-        
+        // Checking
+            
+        check_network_code ( num_of_input, entry_temp.network_code, logfile );
+        inputfile >> entry_temp.station_code;         
+        check_station_code ( num_of_input, entry_temp.station_code, logfile );
         inputfile >> entry_temp.type_of_band;        
-        if ( ( uppercase ( entry_temp.type_of_band ) != uppercase ( "Long-period" ) ) && ( uppercase ( entry_temp.type_of_band ) != uppercase ( "Short-period" ) ) && ( uppercase ( entry_temp.type_of_band ) != uppercase ( "Broadband" ) ) ) {
-            flag = 3;
-        }
-        if ( flag == 3 ) {
-            print_file ( "Entry # ", logfile );
-            print_file ( num_of_input, logfile );
-            print_file ( " ignored. Invalid type of band. ", logfile ); 
-            print_file ( "\n", logfile );
-        }
-        
-        // Checking Type of Instrument
-        
+        check_type_of_band ( num_of_input, entry_temp.type_of_band, logfile );
         inputfile >> entry_temp.type_of_instrument;        
-        if ( ( uppercase ( entry_temp.type_of_instrument ) != uppercase ( "High-Gain" ) ) && ( uppercase ( entry_temp.type_of_instrument ) != uppercase ( "Low-Gain" ) ) && ( uppercase ( entry_temp.type_of_instrument ) != uppercase ( "Accelerometer" ) ) ) {
-            flag = 4;
-        }
-        if ( flag == 4 ) {
-            print_file ( "Entry # ", logfile );
-            print_file ( num_of_input, logfile );
-            print_file ( " ignored. Invalid type of instrument. ", logfile ); 
-            print_file ( "\n", logfile );
-        }
-        
-        // Checking Orientation
+        check_type_of_instrument ( num_of_input, entry_temp.type_of_instrument, logfile );
+
+       // Checking Orientation
         
         temp1 = "";
         temp2 = "";
@@ -306,41 +256,19 @@ int main () {
     print_file ( "\n", logfile );
     print_file ( "Finished!", logfile );
  
+    // Printing Outputs
+    
     outputfile << ( num_of_signal ) << endl;
     for (int i = 0; i < ( num_of_signal ); i++) {
     
-     // Changing Names
+        // Changing Names to Abbreviations
     
-    if ( uppercase ( entry_array[i].type_of_band ) == uppercase ( "Long-period" ) ) {
-        entry_array[i].type_of_band = "L";
-    }    
-    if ( uppercase ( entry_array[i].type_of_band ) == uppercase ( "Short-period" ) ) {
-        entry_array[i].type_of_band = "B";
-    }
-    if ( uppercase ( entry_array[i].type_of_band ) == uppercase ( "broadband" ) ) {
-        entry_array[i].type_of_band = "H";
-    }   
-    if ( uppercase ( entry_array[i].type_of_instrument ) == uppercase ( "High-Gain" ) ) {
-        entry_array[i].type_of_instrument = "H";
-    }    
-    if ( uppercase ( entry_array[i].type_of_instrument ) == uppercase ( "Low-Gain" ) ) {
-        entry_array[i].type_of_instrument = "L";
-    }
-    if ( uppercase ( entry_array[i].type_of_instrument ) == uppercase ( "Accelerometer" ) ) {
-        entry_array[i].type_of_instrument = "N";
-    } 
+        entry_array[i].type_of_band = change_band ( entry_array[i].type_of_band );
+        entry_array[i].type_of_instrument = change_instrument ( entry_array[i].type_of_instrument );
     
-        temp= "";
-        temp.append(Event_ID);
-        temp.append(".");
-        temp.append(entry_array[i].network_code);
-        temp.append(".");
-        temp.append(entry_array[i].station_code);
-        temp.append(".");
-        temp.append(entry_array[i].type_of_band);
-        temp.append(entry_array[i].type_of_instrument);
-        temp.append(entry_array[i].orientation);
-        outputfile << temp << endl;    
+        // Producing Signal
+        
+        produce_signal ( outputfile, Event_ID, entry_array[i].network_code, entry_array[i].station_code, entry_array[i].type_of_band, entry_array[i].type_of_instrument, entry_array[i].orientation );    
     }
     
     return 0;
@@ -550,3 +478,126 @@ string monthstring (months month) {
             return "ILLEGAL";
     }
 }
+
+// Function to Convert Name to Abbreviation for Band
+
+string change_band ( string name ) {
+    if ( uppercase ( name ) == uppercase ( "Long-period" ) ) {
+        name = "L";
+    }    
+    if ( uppercase ( name) == uppercase ( "Short-period" ) ) {
+        name = "B";
+    }
+    if ( uppercase ( name ) == uppercase ( "broadband" ) ) {
+        name = "H";
+    }
+    return name;   
+}
+
+// Function to Convert Name to Abbreviation for Instrument
+
+string change_instrument ( string name ) {
+    if ( uppercase ( name ) == uppercase ( "High-Gain" ) ) {
+        name = "H";
+    }    
+    if ( uppercase ( name ) == uppercase ( "Low-Gain" ) ) {
+        name = "L";
+    }
+    if ( uppercase ( name ) == uppercase ( "Accelerometer" ) ) {
+        name = "N";
+    }
+    return name;
+}     
+
+// Function to Produce Signal Name as an String
+        
+void produce_signal ( ofstream & outputfile, string Event_ID, string network_code, string station_code, string type_of_band, string type_of_instrument, string orientation ) { 
+    string temp= "";
+    temp.append(Event_ID);
+    temp.append(".");
+    temp.append(network_code);
+    temp.append(".");
+    temp.append(station_code);
+    temp.append(".");
+    temp.append(type_of_band);
+    temp.append(type_of_instrument);
+    temp.append(orientation);
+    outputfile << temp << endl;
+    return;
+}       
+
+
+// Function to Check Network Code
+
+void check_network_code ( int num_of_input, string code, ofstream & logfile ) {
+    if ( ( code.length() != 2 ) || ( ( code != "CE" ) && ( code != "CI" ) && ( code != "FA" ) && ( code != "NP" ) && ( code != "WR" ) ) ) {
+        flag = 1;
+    }
+    if ( flag == 1) {
+        print_file ( "Entry # ", logfile );
+        print_file ( num_of_input, logfile );
+        print_file ( " ignored. Invalid network. ", logfile );
+        print_file ( "\n", logfile );
+    }
+    return;
+}
+
+// Function to Check Station Code
+
+void check_station_code ( int num_of_input, string code, ofstream & logfile ) {
+    if ( code.length() != 3 ) {
+        if ( code.length() != 5 ) {
+            flag = 2;
+        }
+        else {
+            if ( ( !isdigit ( code[0] ) ) || ( !isdigit ( code[1] ) ) || ( !isdigit ( code[2] ) ) || ( !isdigit ( code[3] ) ) || ( !isdigit ( code[4] ) ) ) {
+                flag = 2;
+            }    
+        }
+    }
+    else {
+        if ( ( !isalpha ( code[0] ) ) || ( !isalpha ( code[1] ) ) || ( !isalpha ( code[2] ) ) ) {
+            flag = 2;
+        }
+        else {
+            if ( uppercase ( code ) != code ) {
+                flag = 2;
+            }    
+        }
+    }
+    if ( flag == 2) {
+        print_file ( "Entry # ", logfile );
+        print_file ( num_of_input, logfile );
+        print_file ( " ignored. Invalid station code. ", logfile ); 
+        print_file ( "\n", logfile );
+    }
+    return;
+}            
+    
+// Function to Check Type of Band
+
+void check_type_of_band ( int num_of_input, string band, ofstream & logfile ) {
+    if ( ( uppercase ( band ) != uppercase ( "Long-period" ) ) && ( uppercase ( band ) != uppercase ( "Short-period" ) ) && ( uppercase ( band ) != uppercase ( "Broadband" ) ) ) {
+        flag = 3;
+    }
+    if ( flag == 3 ) {
+        print_file ( "Entry # ", logfile );
+        print_file ( num_of_input, logfile );
+        print_file ( " ignored. Invalid type of band. ", logfile ); 
+        print_file ( "\n", logfile );
+    }
+    return;
+}    
+       
+void check_type_of_instrument ( int num_of_input, string instrument, ofstream & logfile ) {        
+    if ( ( uppercase ( instrument ) != uppercase ( "High-Gain" ) ) && ( uppercase ( instrument ) != uppercase ( "Low-Gain" ) ) && ( uppercase ( instrument ) != uppercase ( "Accelerometer" ) ) ) {
+        flag = 4;
+    }
+    if ( flag == 4 ) {
+        print_file ( "Entry # ", logfile );
+        print_file ( num_of_input, logfile );
+        print_file ( " ignored. Invalid type of instrument. ", logfile ); 
+        print_file ( "\n", logfile );
+    }
+}    
+            
